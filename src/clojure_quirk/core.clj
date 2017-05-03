@@ -87,7 +87,30 @@
              (CallByLabel (first (second subtree))(second subtree) scope))
         )
   )
-        
+  
+;Value := Name | MyNumber
+(defn Value [subtree scope]
+  (println "VALUE")
+  (cond (= :Name (first (second subtree)))
+             (CallByLabel (first (second subtree))(second subtree) scope)
+       (= :MyNumber (first (second subtree)))
+             (CallByLabel (first (second subtree))(second subtree) scope))
+  )
+
+;Number := NUMBER | SUB NUMBER | ADD NUMBER
+(defn MyNumber [subtree scope]
+  (println "NUMBER")
+  (println (second (second subtree)))
+  (cond (= :SUB (first (second subtree)))
+        (println "lol")
+                 ;(-(Double/parseDouble (second subtree)))
+        (= :ADD (first (second subtree)))     
+        (println "lol")
+                 ;(Double/parseDouble (third subtree))
+        :else
+                 (Double/parseDouble (second (second subtree)))
+        )
+  )
         
 (defn interpret-quirk [subtree scope] 
   (println "Interpreting")
