@@ -315,11 +315,10 @@
    (def SHOW_PARSE_TREE true)
  )
  (def quirk-parser (insta/parser (slurp "resources/quirk-grammar-ebnf") :auto-whitespace :standard))
- (def parse-tree (quirk-parser "function cloud_func(a){ return a, a^2, a^3 } print cloud_func(2):1"))
+ (def input (slurp "ExampleN.q"))
+ (def parse-tree (quirk-parser input))
  (if(= true SHOW_PARSE_TREE)
        (println parse-tree)
        )
- (interpret-quirk parse-tree {})
-       
-
+ (interpret-quirk parse-tree {})      
 )
