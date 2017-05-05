@@ -5,7 +5,9 @@
 (defn third [alist] (nth alist 2))
 (defn fourth [alist] (nth alist 3))
 (defn fifth [alist] (nth alist 4))
+(defn sixth [alist] (nth alist 5))
 (defn seventh [alist] (nth alist 6))
+
 
 ;Used to print while also returning the value of what is being printed.
 (defn ret-print [thingToPrint] 
@@ -54,6 +56,7 @@
   (def body (seventh subtree))
   (def combined [params body])
   (def newScope(assoc scope(CallByLabel (first (third subtree))(third subtree) scope) combined))
+  (println params)
   newScope
 )
 
@@ -61,10 +64,13 @@
 (defn FunctionParams [subtree scope]
   (println "Functionparams")
   (cond (= 3 (count subtree))
-        ((do(def return(CallByLabel(first (second subtree))(second subtree) scope)))
-             return))
+        (do(def myVec
+             (list (CallByLabel(first (second subtree))(second subtree) scope)))
+                       (ret-print myVec))
+                                      
   :else
         []
+        )
         )
 
 ;FunctionBody := Program Return | Return
@@ -83,7 +89,8 @@
 (defn Return [subtree scope]
   (println "RETURN")
   (def ret (CallByLabel(first(third subtree))(third subtree) scope))
-  ret
+ 
+  (ret-print ret)
   )
 
 
@@ -98,8 +105,7 @@
         (CallByLabel (first (second subtree))(second subtree) scope)
         )
    )
-  
-  
+ 
   
 ;SingleAssignment := VAR Name ASSIGN Expression
 (defn SingleAssignment [subtree scope]
@@ -110,10 +116,17 @@
   )
   
 
+;MultipleAssignment := VAR NameList ASSIGN FunctionCall
+(defn MultipleAssignment [subtree scope]
+  (println "MultipleAssignment")
+  
+  
+  )
+  
+
 ;Print := PRINT Expression
 (defn Print [subtree scope]
   (println "PRINT")
-  (print subtree)
   (ret-print (CallByLabel (first (third subtree))(third subtree) scope))
 )
         
@@ -123,9 +136,10 @@
   (println "NAMELIST")
   (cond 
   (= 4 (count subtree))
-     (do(def myVec [(CallByLabel (first (second subtree))(second subtree) scope) 
-                    (CallByLabel (third (second subtree))(second subtree) scope)])
-       (println myVec))
+     (do(def myVec(list (CallByLabel (first (second subtree))(second subtree) scope)
+                        (CallByLabel (first (fourth subtree))(fourth subtree) scope) 
+                        ))
+     (ret-print myVec))
   :else
      (CallByLabel (first (second subtree))(second subtree) scope)
      )
@@ -135,9 +149,11 @@
 (defn ParameterList [subtree scope]
   (println "ParameterList")
   (cond (> (count subtree) 2)
-        (do(def myVec [(CallByLabel (first (second subtree))(second subtree) scope) 
-                    (CallByLabel (third (second subtree))(second subtree) scope)])
-        (println myVec))
+        (do(def myVec (list (CallByLabel (first (second subtree))(second subtree) scope)
+                         (CallByLabel (first (fourth subtree))(fourth subtree) scope)
+                         ))
+
+          (ret-print myVec))       
   :else
         (CallByLabel (first (second subtree))(second subtree) scope)
         )
@@ -201,22 +217,73 @@
 ;FunctionCall := Name LPAREN FunctionCallParams COLON MyNumber | Name LPAREN FunctionCallParams
 (defn FunctionCall [subtree scope]
   (println "FunctionCall") 
-  (def info (CallByLabel(first (second subtree))(second subtree) scope))
-  (def func_name (second (second (second subtree))))
-  ;(println "1")
-  (def newScope (assoc scope :__parent__ scope))
-  ;(println "2")
-  (def paramlist (CallByLabel(first (fourth subtree))(fourth subtree) scope))
-  ;(println "3")
-  (def ret(CallByLabel(first (second info))(second info) newScope))
-  ret
+  (cond 
+    (= 6 (count subtree))
+      (do
+		  ;Get all stored function info.
+		  (def info (CallByLabel(first (second subtree))(second subtree) scope))
+		  (def func_name (second (second (second subtree))))
+		  ;Add global scope as local scope parent.
+		  (def newScope (assoc scope :__parent__ scope))
+		  (def paramlist (CallByLabel(first (fourth subtree))(fourth subtree) scope))
+		  (def paramnames (first (first info)))
+		  ;Create new scope with parameter values included.
+      ;Checks if there is one or many params, otherwise type issues arise
+      ;(trying to pass a double instead of a list)
+      (cond 
+            (nil? (second paramnames))
+                (def finalScope (assoc newScope paramnames paramlist))
+            :else
+                (do
+		            (def newMap (zipmap paramnames paramlist))
+		            (def finalScope (merge newScope newMap))))     
+      ;Get return index
+      (def index (CallByLabel (first (sixth subtree))(sixth subtree) scope ))
+		  ;Run and return body. 
+		  (def ret(CallByLabel(first (second info))(second info) finalScope))
+      (nth ret index)
+    )
+    :else
+    (do
+      ;Get all stored function info.
+		  (def info (CallByLabel(first (second subtree))(second subtree) scope))
+		  (def func_name (second (second (second subtree))))
+		  ;Add global scope as local scope parent.
+		  (def newScope (assoc scope :__parent__ scope))
+		  (def paramlist (CallByLabel(first (fourth subtree))(fourth subtree) scope))
+		  (def paramnames (first (first info)))
+      (cond 
+              (nil? (second paramnames))
+                  (def finalScope (assoc newScope paramnames paramlist))
+              :else
+                  (do
+		              (def newMap (zipmap paramnames paramlist))
+		              (def finalScope (merge newScope newMap)))) 
+		  ;Create new scope with parameter values included.
+		  (def newMap (zipmap paramnames paramlist))
+		  (def finalScope (merge newScope newMap))
+		  ;Run and return body. 
+		  (def ret(CallByLabel(first (second info))(second info) finalScope))
+		  ret
+    )
+		  
+    )
+  
+  ;(println "FunctionCall") 
+  ;(def info (CallByLabel(first (second subtree))(second subtree) scope))
+  ;(def func_name (second (second (second subtree))))
+  ;(def newScope (assoc scope :__parent__ scope))
+  ;(def paramlist (CallByLabel(first (fourth subtree))(fourth subtree) scope))
+  ;(def ret(CallByLabel(first (second info))(second info) newScope))
+  ;ret
   )
   
 ;FunctionCallParams := ParameterList RPAREN | RPAREN
 (defn FunctionCallParams [subtree scope]
   (println "FunctionCallParams")
   (cond (= 3 (count subtree))
-        (CallByLabel (first (second subtree))(second subtree) scope))
+        (CallByLabel (first (second subtree))(second subtree) scope)
+          )
   )
 
 
@@ -261,9 +328,9 @@
                  (Double/parseDouble (second (second subtree)))
         )
   )
-        
+
+;Starts the interpret chain from the head of the parse-tree.
 (defn interpret-quirk [subtree scope] 
-  ;(println "Interpreting")
   (CallByLabel (first subtree) subtree {} ))
 
 (defn -main [& args]
@@ -271,11 +338,12 @@
    (def SHOW_PARSE_TREE true)
  )
  (def quirk-parser (insta/parser (slurp "resources/quirk-grammar-ebnf") :auto-whitespace :standard))
- ;(def parse-tree (quirk-parser "function foo(x){return x+5} print foo"))
- (def parse-tree (quirk-parser "var x =5 function foo_func() { return 2 ^ x} print foo_func()"))
+ (def parse-tree (quirk-parser "function cloud_func(a){  return a, a^2, a^3 } print cloud_func(2):1"))
  (if(= true SHOW_PARSE_TREE)
        ;(println parse-tree)
-       (interpret-quirk parse-tree {})
+       (println "---")
+       )
+ (interpret-quirk parse-tree {})
        
-)
+
 )
