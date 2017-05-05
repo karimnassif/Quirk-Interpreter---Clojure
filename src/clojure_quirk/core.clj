@@ -8,6 +8,12 @@
 (defn sixth [alist] (nth alist 5))
 (defn seventh [alist] (nth alist 6))
 
+;Parameterlist uses recursion that causes nested lists, this flattens them. 
+(defn my-flatten [x]
+  (if (coll? x)
+    (mapcat my-flatten x)
+    [x]))
+
 
 ;Used to print while also returning the value of what is being printed.
 (defn ret-print [thingToPrint] 
@@ -27,7 +33,6 @@
 
 ;Program --> Statement Program | Statement     
 (defn Program [subtree scope]   
-  (println "PROGRAM")
   ;Program0
   (cond (= 3 (count subtree))
         ((do(def newScope(CallByLabel (first (second subtree)) (second subtree) scope)))
@@ -40,7 +45,6 @@
 
 ;Statement := FunctionDeclaration | Assignment | Print
 (defn Statement [subtree scope]
-  (println "STATEMENT")
   (cond (= :FunctionDeclaration (first (second subtree)))
               (CallByLabel (first (second subtree))(second subtree) scope)
         (= :Assignment (first (second subtree)))
@@ -51,22 +55,19 @@
 
 ;FunctionDeclaration := FUNCTION Name LPAREN FunctionParams LBRACE FunctionBody RBRACE
 (defn FunctionDeclaration [subtree scope]
-  (println "FunctionDeclaration")
   (def params(CallByLabel (first (fifth subtree))(fifth subtree) scope))
   (def body (seventh subtree))
   (def combined [params body])
   (def newScope(assoc scope(CallByLabel (first (third subtree))(third subtree) scope) combined))
-  (println params)
   newScope
 )
 
 ;FunctionParams := NameList RPAREN | RPAREN
 (defn FunctionParams [subtree scope]
-  (println "Functionparams")
   (cond (= 3 (count subtree))
         (do(def myVec
              (list (CallByLabel(first (second subtree))(second subtree) scope)))
-                       (ret-print myVec))
+                       myVec)
                                       
   :else
         []
@@ -87,16 +88,14 @@
 
 ;Return := RETURN ParameterList
 (defn Return [subtree scope]
-  (println "RETURN")
   (def ret (CallByLabel(first(third subtree))(third subtree) scope))
  
-  (ret-print ret)
+  ret
   )
 
 
 ;Assignment := SingleAssignment | MultipleAssignment
 (defn Assignment [subtree scope]
-  (println "Assignment")
   (cond 
   (= :SingleAssignment (first (second subtree)))
         (do(def newScope (CallByLabel (first (second subtree))(second subtree) scope))
@@ -109,7 +108,6 @@
   
 ;SingleAssignment := VAR Name ASSIGN Expression
 (defn SingleAssignment [subtree scope]
-  (println "SingleAssignment")
   (def newScope (assoc scope (CallByLabel (first (third subtree))(third subtree) scope)
 					(CallByLabel (first (fifth subtree))(fifth subtree) scope)))
   newScope
@@ -118,28 +116,27 @@
 
 ;MultipleAssignment := VAR NameList ASSIGN FunctionCall
 (defn MultipleAssignment [subtree scope]
-  (println "MultipleAssignment")
-  
-  
+  (def names (CallByLabel (first (third subtree))(third subtree) scope))
+  (def values (CallByLabel (first (fifth subtree))(fifth subtree) scope))
+  (def ret (zipmap names values))
+  ret 
   )
   
 
 ;Print := PRINT Expression
 (defn Print [subtree scope]
-  (println "PRINT")
   (ret-print (CallByLabel (first (third subtree))(third subtree) scope))
 )
         
 
 ;NameList := Name COMMA NameList | Name
 (defn NameList [subtree scope]
-  (println "NAMELIST")
   (cond 
   (= 4 (count subtree))
      (do(def myVec(list (CallByLabel (first (second subtree))(second subtree) scope)
                         (CallByLabel (first (fourth subtree))(fourth subtree) scope) 
                         ))
-     (ret-print myVec))
+     myVec)
   :else
      (CallByLabel (first (second subtree))(second subtree) scope)
      )
@@ -147,13 +144,12 @@
 
 ;ParameterList := Parameter COMMA ParameterList | Parameter
 (defn ParameterList [subtree scope]
-  (println "ParameterList")
   (cond (> (count subtree) 2)
         (do(def myVec (list (CallByLabel (first (second subtree))(second subtree) scope)
                          (CallByLabel (first (fourth subtree))(fourth subtree) scope)
                          ))
-
-          (ret-print myVec))       
+          (def flatVec (my-flatten myVec))
+          flatVec)       
   :else
         (CallByLabel (first (second subtree))(second subtree) scope)
         )
@@ -161,13 +157,11 @@
 
 ;Parameter := Expression | Name
 (defn Parameter [subtree scope]
-  (println "Parameter")
   (CallByLabel(first(second subtree))(second subtree) scope)
   )
 
 ;Expression -->  Term ADD Expression | Term SUB Expression | Term    
 (defn Expression [subtree scope]
-  ;(println "EXPRESSION")
   (cond (= 2 (count subtree))
                 (CallByLabel (first (second subtree))(second subtree) scope)     
         (= :ADD (first (third subtree)))
@@ -181,7 +175,6 @@
 
 ;Term := Factor MULT Term | Factor DIV Term | Factor
 (defn Term [subtree scope] 
- (println "TERM")
   (cond (= 2 (count subtree))
              (CallByLabel (first (second subtree))(second subtree) scope)
         (= :MULT (first (third subtree)))
@@ -194,7 +187,6 @@
 
 ;Factor := SubExpression EXP Factor | SubExpression | FunctionCall | Value EXP Factor | Value
 (defn Factor [subtree scope] 
-  (println "FACTOR")
     (cond 
       (and (= 4 (count subtree))(= :SubExpression (first (second subtree))))
              (exp (CallByLabel (first (second subtree))(second subtree) scope)
@@ -216,7 +208,6 @@
 
 ;FunctionCall := Name LPAREN FunctionCallParams COLON MyNumber | Name LPAREN FunctionCallParams
 (defn FunctionCall [subtree scope]
-  (println "FunctionCall") 
   (cond 
     (= 6 (count subtree))
       (do
@@ -265,22 +256,12 @@
 		  ;Run and return body. 
 		  (def ret(CallByLabel(first (second info))(second info) finalScope))
 		  ret
+    )		  
     )
-		  
-    )
-  
-  ;(println "FunctionCall") 
-  ;(def info (CallByLabel(first (second subtree))(second subtree) scope))
-  ;(def func_name (second (second (second subtree))))
-  ;(def newScope (assoc scope :__parent__ scope))
-  ;(def paramlist (CallByLabel(first (fourth subtree))(fourth subtree) scope))
-  ;(def ret(CallByLabel(first (second info))(second info) newScope))
-  ;ret
   )
   
 ;FunctionCallParams := ParameterList RPAREN | RPAREN
 (defn FunctionCallParams [subtree scope]
-  (println "FunctionCallParams")
   (cond (= 3 (count subtree))
         (CallByLabel (first (second subtree))(second subtree) scope)
           )
@@ -289,7 +270,6 @@
 
 ;SubExpression := LPAREN Expression RPAREN
 (defn SubExpression [subtree scope]
-  (println "SUBEXPRESSION")
   (CallByLabel (first (third subtree))(third subtree) scope)
   )
                                    
@@ -297,7 +277,6 @@
   
 ;Value := Name | MyNumber
 (defn Value [subtree scope]
-  (println "VALUE")
   (cond (= :Name (first (second subtree)))
              (CallByLabel (first (second subtree))(second subtree) scope)
        (= :MyNumber (first (second subtree)))
@@ -308,7 +287,6 @@
 
 ;Name := IDENT | SUB IDENT | ADD IDENT
 (defn Name [subtree scope]
-  (println "NAME")
   (cond 
        (contains? scope (second (second subtree)))
                  (get scope (second (second subtree)))
@@ -319,7 +297,6 @@
 
 ;Number := NUMBER | SUB NUMBER | ADD NUMBER
 (defn MyNumber [subtree scope]
-  (println "NUMBER")
   (cond (= :SUB (first (second subtree)))
                  (-(Double/parseDouble (second (third subtree))))
         (= :ADD (first (second subtree)))     
@@ -338,10 +315,9 @@
    (def SHOW_PARSE_TREE true)
  )
  (def quirk-parser (insta/parser (slurp "resources/quirk-grammar-ebnf") :auto-whitespace :standard))
- (def parse-tree (quirk-parser "function cloud_func(a){  return a, a^2, a^3 } print cloud_func(2):1"))
+ (def parse-tree (quirk-parser "function cloud_func(a){ return a, a^2, a^3 } print cloud_func(2):1"))
  (if(= true SHOW_PARSE_TREE)
-       ;(println parse-tree)
-       (println "---")
+       (println parse-tree)
        )
  (interpret-quirk parse-tree {})
        
